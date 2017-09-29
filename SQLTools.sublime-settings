@@ -6,7 +6,7 @@
     "thread_timeout"        : 15,     // query timeout in seconds
     "history_size"          : 100,
     "show_result_on_window" : false,
-    "clear_output"          : true,
+    "clear_output"          : false,
     "safe_limit"            : false,
     "expand_to_paragraph"   : false,
     "use_streams"           : false, // use streams for results
@@ -51,7 +51,7 @@
         "strip_comments"  : false,
         "indent_tabs"     : false,
         "indent_width"    : 4,
-        "reindent"        : true
+        "reindent"        : false
     },
     "unescape_quotes" : [
         "php"
