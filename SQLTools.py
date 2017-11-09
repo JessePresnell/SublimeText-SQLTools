@@ -1,4 +1,4 @@
-__version__ = "v0.9.6"
+__version__ = "v0.9.7"
 
 import sys
 import os
@@ -368,7 +368,7 @@ class ST(EventListener):
         lineStartToLocation = sublime.Region(lineStartPoint, currentPoint)
         try:
             lineStr = view.substr(lineStartToLocation)
-            prefix = re.split('[^`\"\w.]+', lineStr).pop()
+            prefix = re.split('[^`\"\w.\$]+', lineStr).pop()
         except Exception as e:
             Log(e)
 
