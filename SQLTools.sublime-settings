@@ -4,6 +4,22 @@
 {
     "debug" : false,
 
+    /**
+     * If DB cli binary is not in PATH, set the full path in "cli" section.
+     * Note: forward slashes ("/") should be used in path. Example:
+     *  "mysql"   : "c:/Program Files/MySQL/MySQL Server 5.7/bin/mysql.exe"
+     */
+    "cli" : {
+        "mysql"   : "mysql",
+        "pgsql"   : "psql",
+        "mssql"   : "sqlcmd",
+        "oracle"  : "sqlplus",
+        "sqlite"  : "sqlite3",
+        "vertica" : "vsql",
+        "firebird": "isql",
+        "sqsh"    : "sqsh",
+    },
+
     // use paragraph (text between newlines), if selection is empty
     "expand_to_paragraph" : false,
 
@@ -34,25 +50,6 @@
     },
 
     /**
-     * The list of syntax selectors for which the plugin autocompletion will be active.
-     * An empty list means autocompletion always active.
-     */
-    "selectors": [
-        "source.sql",
-        "source.pgsql",
-        "source.plpgsql.postgres",
-        "source.plsql.oracle",
-        "source.tsql"
-    ],
-
-    /**
-     * Possible values for autocompletion: "basic", "smart", true ("smart"),
-     *                                      or false (disable)
-     * Completion keywords case is controlled by format.keyword_case (see below)
-     */
-    "autocompletion": "smart",
-
-    /**
      * Print the queries that were executed to the output.
      * Possible values for show_query: "top", "bottom", true ("top"), or false (disable)
      * When using regular output, this will determine where query details is displayed.
@@ -60,22 +57,6 @@
      * the bottom of result.
      */
     "show_query": false,
-
-    /**
-     * If DB cli binary is not in PATH, set the full path in "cli" section.
-     * Note: forward slashes ("/") should be used in path. Example:
-     *  "mysql"   : "c:/Program Files/MySQL/MySQL Server 5.7/bin/mysql.exe"
-     */
-    "cli" : {
-        "mysql"   : "mysql",
-        "pgsql"   : "psql",
-        "mssql"   : "sqlcmd",
-        "oracle"  : "sqlplus",
-        "sqlite"  : "sqlite3",
-        "vertica" : "vsql",
-        "firebird": "isql",
-        "sqsh"    : "sqsh",
-    },
 
     /**
      * Possible values for autocompletion: "basic", "smart", true ("smart"),
@@ -121,8 +102,7 @@
      * Names in the curly brackets (e.g. `{host}`) in sections `args`, `args_optional`,
      * `env`, `env_optional` are replaced by the values specified in the connection.
      */
-    "cli_options":
-    {
+    "cli_options": {
         "pgsql": {
             "options": ["--no-password"],
             "before": [],
