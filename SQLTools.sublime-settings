@@ -1,33 +1,66 @@
-// NOTE: it is strongly advised to override
-// only those settings that you wish to change
-// in your Users/SQLTools.sublime-settings
+// NOTE: it is strongly advised to override ONLY those settings
+// that you wish to change in your Users/SQLTools.sublime-settings.
+// Don't copy-paste the entire config.
 {
-    "debug"                 : true,
-    "thread_timeout"        : 15,     // query timeout in seconds
-    "history_size"          : 100,
+    "debug" : false,
+
+    // use paragraph (text between newlines), if selection is empty
+    "expand_to_paragraph" : false,
+
+    // puts results either in output panel or new window
     "show_result_on_window" : false,
-    "clear_output"          : false,
-    "safe_limit"            : false,
-    "expand_to_paragraph"   : false,
-    "use_streams"           : false, // use streams for results
+
+    // clears the output of prev. query
+    "clear_output" : true,
+
+    // query timeout in seconds
+    "thread_timeout" : 15,
+
+    // stream the output line by line
+    "use_streams" : false,
+
+    // number of queries to save in the history
+    "history_size" : 100,
+
+    // unless false, appends LIMIT clause to SELECT statements (not compatible with all DB's)
+    "safe_limit": false,
+
+    "unescape_quotes" : [
+        "php",
+    ],
+
+    "show_records": {
+        "limit": 50,
+    },
+
     /**
      * The list of syntax selectors for which the plugin autocompletion will be active.
      * An empty list means autocompletion always active.
      */
-    "selectors": ["source.sql", "source.pgsql", "source.plpgsql.postgres", "source.plsql.oracle", "source.tsql"],
+    "selectors": [
+        "source.sql",
+        "source.pgsql",
+        "source.plpgsql.postgres",
+        "source.plsql.oracle",
+        "source.tsql"
+    ],
+
     /**
      * Possible values for autocompletion: "basic", "smart", true ("smart"),
      *                                      or false (disable)
      * Completion keywords case is controlled by format.keyword_case (see below)
      */
     "autocompletion": "smart",
+
     /**
+     * Print the queries that were executed to the output.
      * Possible values for show_query: "top", "bottom", true ("top"), or false (disable)
      * When using regular output, this will determine where query details is displayed.
      * In stream output mode, any option that isn't false will print query details at
      * the bottom of result.
      */
     "show_query": false,
+
     /**
      * If DB cli binary is not in PATH, set the full path in "cli" section.
      * Note: forward slashes ("/") should be used in path. Example:
@@ -36,16 +69,29 @@
     "cli" : {
         "mysql"   : "mysql",
         "pgsql"   : "psql",
-        "oracle"  : "sqlplus",
         "mssql"   : "sqlcmd",
+        "oracle"  : "sqlplus",
+        "sqlite"  : "sqlite3",
         "vertica" : "vsql",
-        "sqsh"    : "sqsh",
         "firebird": "isql",
-        "sqlite"  : "sqlite3"
+        "sqsh"    : "sqsh",
     },
-    "show_records": {
-        "limit": 50
-    },
+
+    /**
+     * Possible values for autocompletion: "basic", "smart", true ("smart"),
+     *                                      or false (disable)
+     * Completion keywords case is controlled by format.keyword_case (see below)
+     */
+    "autocompletion": "smart",
+
+    // Settings used for formatting the queries and autocompletions
+    //
+    // "keyword_case"   , "upper", "lower", "capitalize" and null (leaves case intact)
+    // "identifier_case", "upper", "lower", "capitalize" and null (leaves case intact)
+    // "strip_comments" , formatting removes comments
+    // "indent_tabs"    , use tabs instead of spaces
+    // "indent_width"   , indentation width
+    // "reindent"       , reindent code
     "format" : {
         "keyword_case"    : "upper",
         "identifier_case" : null,
@@ -54,17 +100,29 @@
         "indent_width"    : 4,
         "reindent"        : false
     },
-    "unescape_quotes" : [
-        "php"
-    ],
+
     /**
-     * Client options for you RDBMS.
-     * In this file, the section cli has the names you can use here. Eg: "pgsql": "psql"
-     * So here, you must have "psql with the same sections listed bellow (options, before, args and queries)"
-     *
-     * Avoid changing the brackets content in "args"
+     * The list of syntax selectors for which the plugin autocompletion will be active.
+     * An empty list means autocompletion always active.
      */
-    "cli_options": {
+    "selectors": [
+        "source.sql",
+        "source.pgsql",
+        "source.plpgsql.postgres",
+        "source.plsql.oracle",
+        "source.tsql",
+    ],
+
+    /**
+     * Command line interface options for each RDBMS.
+     * In this file, the section `cli` above has the names you can use here.
+     * E.g.: "mysql", "pgsql", "oracle"
+     *
+     * Names in the curly brackets (e.g. `{host}`) in sections `args`, `args_optional`,
+     * `env`, `env_optional` are replaced by the values specified in the connection.
+     */
+    "cli_options":
+    {
         "pgsql": {
             "options": ["--no-password"],
             "before": [],
@@ -107,6 +165,7 @@
                 }
             }
         },
+
         "mysql": {
             "options": ["--default-character-set=utf8"],
             "before": [],
@@ -147,6 +206,7 @@
                 }
             }
         },
+
         "mssql": {
             "options": [],
             "before": [],
@@ -192,6 +252,7 @@
                 }
             }
         },
+
         "oracle": {
             "options": ["-S"],
             "before": [
@@ -285,6 +346,7 @@
                 }
             }
         },
+
         "sqlite": {
             "options": [],
             "before": [],
@@ -315,11 +377,12 @@
                 }
             }
         },
+
         "vertica": {
             "options": [],
             "before" : [],
             "after": [],
-            "args": "-h {host} -p {port} -U \"{username}\" -w \"{password}\" -d \"{database}\"",
+            "args": "-h \"{host}\" -p {port} -U \"{username}\" -w \"{password}\" -d \"{database}\"",
             "queries": {
                 "execute": {
                     "options": []
@@ -337,15 +400,16 @@
                     "options": []
                 },
                 "desc" : {
-                    "query": "select table_schema || '.' || table_name as tblname from v_catalog.tables where is_system_table = false;",
+                    "query": "select quote_ident(table_schema) || '.' || quote_ident(table_name) as obj from v_catalog.tables where is_system_table = false;",
                     "options": ["--tuples-only", "--no-vsqlrc"]
                 },
                 "columns": {
-                    "query": "select table_name || '.' || column_name as tblname from v_catalog.columns where is_system_table = false order by table_name, ordinal_position;",
+                    "query": "select quote_ident(table_name) || '.' || quote_ident(column_name) as obj from v_catalog.columns where is_system_table = false order by table_name, ordinal_position;",
                     "options": ["--tuples-only", "--no-vsqlrc"]
                 }
             }
         },
+
         "firebird": {
             "options": [],
             "before": [],
@@ -417,6 +481,7 @@
                 }
             }
         },
+
         "sqsh": {
             "options": [],
             "before": [],
