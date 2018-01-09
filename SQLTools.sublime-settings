@@ -2,8 +2,6 @@
 // that you wish to change in your Users/SQLTools.sublime-settings.
 // Don't copy-paste the entire config.
 {
-    "debug" : false,
-
     /**
      * If DB cli binary is not in PATH, set the full path in "cli" section.
      * Note: forward slashes ("/") should be used in path. Example:
@@ -17,7 +15,7 @@
         "sqlite"  : "sqlite3",
         "vertica" : "vsql",
         "firebird": "isql",
-        "sqsh"    : "sqsh",
+        "sqsh"    : "sqsh"
     },
 
     // use paragraph (text between newlines), if selection is empty
@@ -42,12 +40,14 @@
     "safe_limit": false,
 
     "unescape_quotes" : [
-        "php",
+        "php"
     ],
 
     "show_records": {
-        "limit": 50,
+        "limit": 50
     },
+
+    "debug" : false,
 
     /**
      * Print the queries that were executed to the output.
@@ -91,7 +91,7 @@
         "source.pgsql",
         "source.plpgsql.postgres",
         "source.plsql.oracle",
-        "source.tsql",
+        "source.tsql"
     ],
 
     /**
