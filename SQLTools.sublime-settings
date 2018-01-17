@@ -7,7 +7,7 @@
      * Note: forward slashes ("/") should be used in path. Example:
      *  "mysql"   : "c:/Program Files/MySQL/MySQL Server 5.7/bin/mysql.exe"
      */
-    "cli" : {
+    "cli": {
         "mysql"   : "mysql",
         "pgsql"   : "psql",
         "mssql"   : "sqlcmd",
@@ -18,36 +18,36 @@
         "sqsh"    : "sqsh"
     },
 
-    // use paragraph (text between newlines), if selection is empty
-    "expand_to_paragraph" : false,
+    // If there is no SQL selected, use "expanded" region.
+    // Possible options:
+    //  "file"      - entire file contents
+    //  "paragraph" - text between newlines relative to cursor(s)
+    //  "line"      - current line of cursor(s)
+    "expand_to": "file",
 
     // puts results either in output panel or new window
-    "show_result_on_window" : false,
+    "show_result_on_window": false,
 
-    // clears the output of prev. query
-    "clear_output" : true,
+    // clears the output of previous query
+    "clear_output": true,
 
     // query timeout in seconds
-    "thread_timeout" : 15,
+    "thread_timeout": 15,
 
     // stream the output line by line
-    "use_streams" : false,
+    "use_streams": false,
 
     // number of queries to save in the history
-    "history_size" : 100,
-
-    // unless false, appends LIMIT clause to SELECT statements (not compatible with all DB's)
-    "safe_limit": false,
-
-    "unescape_quotes" : [
-        "php"
-    ],
+    "history_size": 100,
 
     "show_records": {
         "limit": 50
     },
 
-    "debug" : false,
+    // unless false, appends LIMIT clause to SELECT statements (not compatible with all DB's)
+    "safe_limit": false,
+
+    "debug": false,
 
     /**
      * Print the queries that were executed to the output.
@@ -73,7 +73,7 @@
     // "indent_tabs"    , use tabs instead of spaces
     // "indent_width"   , indentation width
     // "reindent"       , reindent code
-    "format" : {
+    "format": {
         "keyword_case"    : "upper",
         "identifier_case" : null,
         "strip_comments"  : false,
@@ -107,7 +107,12 @@
             "options": ["--no-password"],
             "before": [],
             "after": [],
-            "args": "-h {host} -p {port} -U {username} -d {database}",
+            "args": "-d {database}",
+            "args_optional": [
+                "-h {host}",
+                "-p {port}",
+                "-U {username}"
+            ],
             "env_optional": {
                 "PGPASSWORD": "{password}"
             },
@@ -147,21 +152,31 @@
         },
 
         "mysql": {
-            "options": ["--default-character-set=utf8"],
+            "options": ["--no-auto-rehash", "--compress"],
             "before": [],
             "after": [],
-            "args": "-h{host} -P{port} -u\"{username}\" -D\"{database}\"",
-            "args_optional": ["--login-path=\"{login-path}\"", "--defaults-extra-file=\"{defaults-extra-file}\"", "-p\"{password}\""],
+            "args": "-D\"{database}\"",
+            "args_optional": [
+                "--login-path=\"{login-path}\"",
+                "--defaults-extra-file=\"{defaults-extra-file}\"",
+                "--default-character-set=\"{default-character-set}\"",
+                "-h\"{host}\"",
+                "-P{port}",
+                "-u\"{username}\""
+            ],
+            "env_optional": {
+                "MYSQL_PWD": "{password}"
+            },
             "queries": {
                 "execute": {
-                    "options": ["--table", "-f"]
+                    "options": ["--table"]
                 },
                 "show records": {
                     "query": "select * from {0} limit {1};",
                     "options": ["--table"]
                 },
                 "desc table": {
-                    "query": "desc {0}",
+                    "query": "desc {0};",
                     "options": ["--table"]
                 },
                 "desc function": {
@@ -174,15 +189,15 @@
                 },
                 "desc" : {
                     "query": "select concat(case when table_schema REGEXP '[^0-9a-zA-Z$_]' then concat('`',table_schema,'`') else table_schema end, '.', case when table_name REGEXP '[^0-9a-zA-Z$_]' then concat('`',table_name,'`') else table_name end) as obj from information_schema.tables where table_schema = database() order by table_name;",
-                    "options": ["--silent", "--raw"]
+                    "options": ["--silent", "--raw", "--skip-column-names"]
                 },
                 "columns": {
                     "query": "select concat(case when table_name REGEXP '[^0-9a-zA-Z$_]' then concat('`',table_name,'`') else table_name end, '.', case when column_name REGEXP '[^0-9a-zA-Z$_]' then concat('`',column_name,'`') else column_name end) as obj from information_schema.columns where table_schema = database() order by table_name, ordinal_position;",
-                    "options": ["--silent", "--raw"]
+                    "options": ["--silent", "--raw", "--skip-column-names"]
                 },
                 "functions": {
                     "query": "select concat(case when routine_schema REGEXP '[^0-9a-zA-Z$_]' then concat('`',routine_schema,'`') else routine_schema end, '.', case when routine_name REGEXP '[^0-9a-zA-Z$_]' then concat('`',routine_name,'`') else routine_name end, '()') as obj from information_schema.routines where routine_schema = database();",
-                    "options": ["--silent", "--raw"]
+                    "options": ["--silent", "--raw", "--skip-column-names"]
                 }
             }
         },
@@ -220,15 +235,15 @@
                 },
                 "desc": {
                     "query": "set nocount on; select concat(table_schema, '.', table_name) as obj from information_schema.tables order by table_schema, table_name;",
-                    "options": ["-h-1"]
+                    "options": ["-h-1", "-r1"]
                 },
                 "columns": {
                     "query": "set nocount on; select distinct concat(table_name, '.', column_name) as obj from information_schema.columns;",
-                    "options": ["-h-1"]
+                    "options": ["-h-1", "-r1"]
                 },
                 "functions": {
                     "query": "set nocount on; select concat(routine_schema, '.', routine_name) as obj from information_schema.routines order by routine_schema, routine_name;",
-                    "options": ["-h-1"]
+                    "options": ["-h-1", "-r1"]
                 }
             }
         },
