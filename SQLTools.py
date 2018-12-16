@@ -1,15 +1,15 @@
-__version__ = "v0.9.8"
+__version__ = "v0.9.9"
 
 import sys
 import os
 import re
+import logging
 
 import sublime
 from sublime_plugin import WindowCommand, EventListener, TextCommand
 from Default.paragraph import expand_to_paragraph
 
 from .SQLToolsAPI import Utils
-from .SQLToolsAPI.Log import Log, Logger
 from .SQLToolsAPI.Storage import Storage, Settings
 from .SQLToolsAPI.Connection import Connection
 from .SQLToolsAPI.History import History
@@ -34,6 +34,19 @@ settings                     = None
 queries                      = None
 connections                  = None
 history                      = None
+
+# create pluggin logger
+DEFAULT_LOG_LEVEL = logging.WARNING
+plugin_logger = logging.getLogger(__package__)
+# some plugins are not playing by the rules and configure the root loger
+plugin_logger.propagate = False
+if not plugin_logger.handlers:
+    plugin_logger_handler = logging.StreamHandler()
+    plugin_logger_formatter = logging.Formatter("[{name}] {levelname}: {message}", style='{')
+    plugin_logger_handler.setFormatter(plugin_logger_formatter)
+    plugin_logger.addHandler(plugin_logger_handler)
+plugin_logger.setLevel(DEFAULT_LOG_LEVEL)
+logger = logging.getLogger(__name__)
 
 
 def getSublimeUserFolder():
@@ -60,27 +73,30 @@ def startPlugin():
     try:
         settings    = Settings(SETTINGS_FILENAME, default=SETTINGS_FILENAME_DEFAULT)
     except Exception as e:
-        msg = __package__ + ": Failed to parse " + SQLTOOLS_SETTINGS_FILE + " file"
-        print(msg + "\nError: " + str(e))
+        msg = '{0}: Failed to parse {1} file'.format(__package__, SQLTOOLS_SETTINGS_FILE)
+        logging.error(msg + "\nError: " + str(e))
         Window().status_message(msg)
 
     try:
         connections = Settings(CONNECTIONS_FILENAME, default=CONNECTIONS_FILENAME_DEFAULT)
     except Exception as e:
-        msg = __package__ + ": Failed to parse " + SQLTOOLS_CONNECTIONS_FILE + " file"
-        print(msg + "\nError: " + str(e))
+        msg = '{0}: Failed to parse {1} file'.format(__package__, SQLTOOLS_CONNECTIONS_FILE)
+        logging.error(msg + "\nError: " + str(e))
         Window().status_message(msg)
 
     queries     = Storage(QUERIES_FILENAME, default=QUERIES_FILENAME_DEFAULT)
     history     = History(settings.get('history_size', 100))
 
-    Logger.setPackageVersion(__version__)
-    Logger.setPackageName(__package__)
-    Logger.setLogging(settings.get('debug', True))
+    if settings.get('debug', False):
+        plugin_logger.setLevel(logging.DEBUG)
+    else:
+        plugin_logger.setLevel(DEFAULT_LOG_LEVEL)
+
     Connection.setTimeout(settings.get('thread_timeout', 15))
     Connection.setHistoryManager(history)
 
-    Log(__package__ + " Loaded!")
+    logger.info('plugin (re)loaded')
+    logger.info('version %s', __version__)
 
 
 def getConnections():
@@ -91,16 +107,17 @@ def getConnections():
         startPlugin()
 
     options = connections.get('connections', {})
+    allSettings = settings.all()
 
     for name, config in options.items():
-        connectionsObj[name] = createConnection(name, config, settings=settings.all())
+        connectionsObj[name] = createConnection(name, config, settings=allSettings)
 
     # project settings
     projectData = Window().project_data()
     if projectData:
         options = projectData.get('connections', {})
         for name, config in options.items():
-            connectionsObj[name] = createConnection(name, config, settings=settings.all())
+            connectionsObj[name] = createConnection(name, config, settings=allSettings)
 
     return connectionsObj
 
@@ -121,7 +138,6 @@ def loadDefaultConnection():
     default = connections.get('default', False)
     if not default:
         return
-    Log('Default database set to ' + default + '. Loading options and auto complete.')
     return default
 
 
@@ -217,7 +233,8 @@ def getOutputPlace(syntax=None, name="SQLTools Result"):
             # if case this is an output pannel, show it
             Window().run_command("show_panel", {"panel": "output." + name})
 
-        Window().focus_view(resultContainer)
+        if settings.get('focus_on_result', False):
+            Window().focus_view(resultContainer)
 
     return resultContainer, onInitialOutputCallback
 
@@ -289,12 +306,12 @@ def getCurrentSyntax():
 
 
 class ST(EventListener):
+    connectionList   = None
     conn             = None
     tables           = []
     columns          = []
     functions        = []
-    connectionList   = None
-    autoCompleteList = []
+    completion       = None
 
     @staticmethod
     def bootstrap():
@@ -306,29 +323,58 @@ class ST(EventListener):
         default = loadDefaultConnection()
         if not default:
             return
+
+        logger.info('default connection is set to "%s"', default)
+
         try:
-            ST.conn = ST.connectionList.get(default)
+            ST.conn = ST.connectionList[default]
+        except KeyError as e:
+            logger.error('connection "%s" set as default, but it does not exists', default)
+        else:
             ST.loadConnectionData()
-        except Exception:
-            Log("Invalid connection setted")
 
     @staticmethod
     def loadConnectionData(tablesCallback=None, columnsCallback=None, functionsCallback=None):
+        # clear the list of identifiers (in case connection is changed)
+        ST.tables = []
+        ST.columns = []
+        ST.functions = []
+        ST.completion = None
+        callbacksRun = 0
+
         if not ST.conn:
             return
 
         def tbCallback(tables):
-            setattr(ST, 'tables', tables)
+            ST.tables = tables
+
+            nonlocal callbacksRun
+            callbacksRun += 1
+            if callbacksRun == 3:
+                ST.completion = Completion(ST.tables, ST.columns, ST.functions, settings=settings)
+
             if tablesCallback:
                 tablesCallback()
 
         def colCallback(columns):
-            setattr(ST, 'columns', columns)
+            ST.columns = columns
+
+            nonlocal callbacksRun
+            callbacksRun += 1
+            if callbacksRun == 3:
+                ST.completion = Completion(ST.tables, ST.columns, ST.functions, settings=settings)
+
             if columnsCallback:
                 columnsCallback()
 
         def funcCallback(functions):
-            setattr(ST, 'functions', functions)
+            ST.functions = functions
+
+            nonlocal callbacksRun
+            callbacksRun += 1
+            if callbacksRun == 3:
+                ST.completion = Completion(ST.tables, ST.columns, ST.functions, settings=settings)
+
             if functionsCallback:
                 functionsCallback()
 
@@ -344,14 +390,8 @@ class ST(EventListener):
         connListNames = list(ST.connectionList.keys())
         connListNames.sort()
         ST.conn = ST.connectionList.get(connListNames[index])
-        # clear list of identifiers in case connection is changed
-        ST.tables = []
-        ST.columns = []
-        ST.functions = []
-
         ST.loadConnectionData(tablesCallback, columnsCallback, functionsCallback)
-
-        Log('Connection {0} selected'.format(ST.conn))
+        logger.info('Connection "{0}" selected'.format(ST.conn))
 
     @staticmethod
     def selectConnection(tablesCallback=None, columnsCallback=None, functionsCallback=None):
@@ -388,10 +428,21 @@ class ST(EventListener):
         if ST.conn is None:
             return None
 
+        if ST.completion is None:
+            return None
+
+        if ST.completion.isDisabled():
+            return None
+
         if not len(locations):
             return None
 
-        selectors = settings.get('selectors', [])
+        # disable completions inside strings
+        if view.match_selector(locations[0], 'string'):
+            return None
+
+        # show completions only for specific selectors
+        selectors = ST.completion.getSelectors()
         selectorMatched = False
         if selectors:
             for selector in selectors:
@@ -400,18 +451,6 @@ class ST(EventListener):
                     break
 
         if not selectorMatched:
-            return None
-
-        # completions enabled? if yes, determine which type
-        completionType = settings.get('autocompletion', 'smart')
-        if not completionType:
-            return None         # autocompletion disabled
-        completionType = str(completionType).strip()
-        if completionType not in ['basic', 'smart']:
-            completionType = 'smart'
-
-        # no completions inside strings
-        if view.match_selector(locations[0], 'string'):
             return None
 
         # sublimePrefix = prefix
@@ -432,35 +471,26 @@ class ST(EventListener):
             lineStr = view.substr(lineStartToLocation)
             prefix = re.split('[^`\"\w.\$]+', lineStr).pop()
         except Exception as e:
-            Log(e)
+            logger.debug(e)
 
-        # determine desired keywords case from settings
-        formatSettings = settings.get('format', {})
-        keywordCase = formatSettings.get('keyword_case', 'upper')
-        uppercaseKeywords = keywordCase.lower().startswith('upper')
+        # use current paragraph as sql text to parse
+        sqlRegion = expand_to_paragraph(view, currentPoint)
+        sql = view.substr(sqlRegion)
+        sqlToCursorRegion = sublime.Region(sqlRegion.begin(), currentPoint)
+        sqlToCursor = view.substr(sqlToCursorRegion)
 
-        inhibit = False
-        completion = Completion(uppercaseKeywords, ST.tables, ST.columns, ST.functions)
-
-        if completionType == 'basic':
-            ST.autoCompleteList = completion.getBasicAutoCompleteList(prefix)
-        else:
-            # use current paragraph as sql text to parse
-            sqlRegion = expand_to_paragraph(view, currentPoint)
-            sql = view.substr(sqlRegion)
-            sqlToCursorRegion = sublime.Region(sqlRegion.begin(), currentPoint)
-            sqlToCursor = view.substr(sqlToCursorRegion)
-            ST.autoCompleteList, inhibit = completion.getAutoCompleteList(prefix, sql, sqlToCursor)
+        # get completions
+        autoCompleteList, inhibit = ST.completion.getAutoCompleteList(prefix, sql, sqlToCursor)
 
         # safe check here, so even if we return empty completions and inhibit is true
         # we return empty completions to show default sublime completions
-        if ST.autoCompleteList is None or len(ST.autoCompleteList) == 0:
+        if autoCompleteList is None or len(autoCompleteList) == 0:
             return None
 
         if inhibit:
-            return (ST.autoCompleteList, sublime.INHIBIT_WORD_COMPLETIONS)
+            return (autoCompleteList, sublime.INHIBIT_WORD_COMPLETIONS)
 
-        return ST.autoCompleteList
+        return autoCompleteList
 
 
 # #
@@ -540,6 +570,14 @@ class StDescFunction(WindowCommand):
         ST.selectFunction(cb)
 
 
+class StRefreshConnectionData(WindowCommand):
+    @staticmethod
+    def run():
+        if not ST.conn:
+            return
+        ST.loadConnectionData()
+
+
 class StExplainPlan(WindowCommand):
     @staticmethod
     def run():
@@ -585,6 +623,14 @@ class StFormat(TextCommand):
         for region in selectionRegions:
             textToFormat = View().substr(region)
             View().replace(edit, region, Utils.formatSql(textToFormat, settings.get('format', {})))
+
+
+class StFormatAll(TextCommand):
+    @staticmethod
+    def run(edit):
+        region = sublime.Region(0, View().size())
+        textToFormat = View().substr(region)
+        View().replace(edit, region, Utils.formatSql(textToFormat, settings.get('format', {})))
 
 
 class StVersion(WindowCommand):
@@ -705,7 +751,6 @@ def reload():
         imp.reload(sys.modules[__package__ + ".SQLToolsAPI.Completion"])
         imp.reload(sys.modules[__package__ + ".SQLToolsAPI.Storage"])
         imp.reload(sys.modules[__package__ + ".SQLToolsAPI.History"])
-        imp.reload(sys.modules[__package__ + ".SQLToolsAPI.Log"])
         imp.reload(sys.modules[__package__ + ".SQLToolsAPI.Command"])
         imp.reload(sys.modules[__package__ + ".SQLToolsAPI.Connection"])
     except Exception as e:
@@ -733,9 +778,9 @@ def plugin_loaded():
         from package_control import events
 
         if events.install(__name__):
-            Log('Installed %s!' % events.install(__name__))
+            logger.info('Installed %s!' % events.install(__name__))
         elif events.post_upgrade(__name__):
-            Log('Upgraded to %s!' % events.post_upgrade(__name__))
+            logger.info('Upgraded to %s!' % events.post_upgrade(__name__))
             sublime.message_dialog(('{0} was upgraded.' +
                                     'If you have any problem,' +
                                     'just restart your Sublime Text.'
@@ -747,3 +792,8 @@ def plugin_loaded():
 
     startPlugin()
     reload()
+
+
+def plugin_unloaded():
+    if plugin_logger.handlers:
+        plugin_logger.handlers.pop()

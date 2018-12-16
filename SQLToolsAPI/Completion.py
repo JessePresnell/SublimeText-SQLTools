@@ -1,10 +1,11 @@
 import re
+import logging
 from collections import namedtuple
 
 from .ParseUtils import extractTables
 
-_join_cond_regex_pattern = r"\s+?JOIN\s+?[\w\.`\"]+\s+?(?:AS\s+)?(\w+)\s+?ON\s+?(?:[\w\.]+)?$"
-JOIN_COND_REGEX = re.compile(_join_cond_regex_pattern, re.IGNORECASE)
+JOIN_COND_PATTERN = r"\s+?JOIN\s+?[\w\.`\"]+\s+?(?:AS\s+)?(\w+)\s+?ON\s+?(?:[\w\.]+)?$"
+JOIN_COND_REGEX = re.compile(JOIN_COND_PATTERN, re.IGNORECASE)
 
 keywords_list = [
     'SELECT', 'UPDATE', 'DELETE', 'INSERT', 'INTO', 'FROM',
@@ -12,6 +13,8 @@ keywords_list = [
     'INNER JOIN', 'LEFT JOIN', 'RIGHT JOIN', 'USING',
     'LIMIT', 'DISTINCT', 'SET'
 ]
+
+logger = logging.getLogger(__name__)
 
 
 # this function is generously used in completions code to get rid
@@ -28,7 +31,7 @@ def _stripQuotesOnDemand(ident, doStrip=True):
 
 
 def _startsWithQuote(ident):
-    # str.startswith can be matched against a tuple
+    # ident is matched against any of the possible ident quotes
     quotes = ('`', '"')
     return ident.startswith(quotes)
 
@@ -45,24 +48,23 @@ def _escapeDollarSign(ident):
 
 
 class CompletionItem(namedtuple('CompletionItem', ['type', 'ident'])):
-    """
-    Represents a potential or actual completion item.
-      * type - Type of item e.g. (Table, Function, Column)
-      * ident - identifier e.g. ("tablename.column", "database.table", "alias")
+    """Represents a potential or actual completion item.
+      * type - type of item (Table, Function, Column)
+      * ident - identifier (table.column, schema.table, alias)
     """
     __slots__ = ()
 
-    # parent of identifier, e.g. "table" from "table.column"
     @property
     def parent(self):
+        """Parent of identifier, e.g. "table" from "table.column" """
         if self.ident.count('.') == 0:
             return None
         else:
             return self.ident.partition('.')[0]
 
-    # name of identifier, e.g. "column" from "table.column"
     @property
     def name(self):
+        """Name of identifier, e.g. "column" from "table.column" """
         return self.ident.split('.').pop()
 
     # for functions - strip open bracket "(" and everything after that
@@ -161,10 +163,31 @@ class CompletionItem(namedtuple('CompletionItem', ['type', 'ident'])):
 
 
 class Completion:
-    def __init__(self, uppercaseKeywords, allTables, allColumns, allFunctions):
+    def __init__(self, allTables, allColumns, allFunctions, settings=None):
         self.allTables = [CompletionItem('Table', table) for table in allTables]
         self.allColumns = [CompletionItem('Column', column) for column in allColumns]
         self.allFunctions = [CompletionItem('Function', func) for func in allFunctions]
+
+        # we don't save the settings (we don't need them after init)
+        if settings is None:
+            settings = {}
+
+        # get completion selectors from settings
+        self.selectors = settings.get('selectors', [])
+
+        # determine type of completions
+        self.completionType = settings.get('autocompletion', 'smart')
+        if not self.completionType:
+            self.completionType = None  # autocompletion disabled
+        else:
+            self.completionType = str(self.completionType).strip()
+            if self.completionType not in ['basic', 'smart']:
+                self.completionType = 'smart'
+
+        # determine desired keywords case from settings
+        formatSettings = settings.get('format', {})
+        keywordCase = formatSettings.get('keyword_case', 'upper')
+        uppercaseKeywords = keywordCase.lower().startswith('upper')
 
         self.allKeywords = []
         for keyword in keywords_list:
@@ -175,7 +198,34 @@ class Completion:
 
             self.allKeywords.append(CompletionItem('Keyword', keyword))
 
-    def getBasicAutoCompleteList(self, prefix):
+    def getSelectors(self):
+        return self.selectors
+
+    def isDisabled(self):
+        return self.completionType is None
+
+    def getAutoCompleteList(self, prefix, sql, sqlToCursor):
+        if self.isDisabled():
+            return None
+
+        autocompleteList = []
+        inhibit = False
+        if self.completionType == 'smart':
+            autocompleteList, inhibit = self._getAutoCompleteListSmart(prefix, sql, sqlToCursor)
+        else:
+            autocompleteList = self._getAutoCompleteListBasic(prefix)
+
+        if not autocompleteList:
+            return None, False
+
+        # return completions with or without quotes?
+        # determined based on ident after last dot
+        startsWithQuote = _startsWithQuote(prefix.split(".").pop())
+        autocompleteList = [item.format(startsWithQuote) for item in autocompleteList]
+
+        return autocompleteList, inhibit
+
+    def _getAutoCompleteListBasic(self, prefix):
         prefix = prefix.lower()
         autocompleteList = []
 
@@ -198,13 +248,9 @@ class Completion:
         if len(autocompleteList) == 0:
             return None
 
-        # return completions with or without quotes?
-        # determined based on ident after last dot
-        startsWithQuote = _startsWithQuote(prefix.split(".").pop())
-        autocompleteList = [item.format(startsWithQuote) for item in autocompleteList]
         return autocompleteList
 
-    def getAutoCompleteList(self, prefix, sql, sqlToCursor):
+    def _getAutoCompleteListSmart(self, prefix, sql, sqlToCursor):
         """
         Generally, we recognize 3 different variations in prefix:
           * ident|           // no dots (.) in prefix
@@ -237,7 +283,8 @@ class Completion:
         try:
             identifiers = extractTables(sql)
         except Exception as e:
-            print(e)
+            logger.debug('Failed to extact the list identifiers from SQL:\n {}'.format(sql),
+                         exc_info=True)
 
         # joinAlias is set only if user is editing join condition with alias. E.g.
         # SELECT a.* from tbl_a a inner join tbl_b b ON |
@@ -248,7 +295,8 @@ class Completion:
                 if joinCondMatch:
                     joinAlias = joinCondMatch.group(1)
             except Exception as e:
-                print(e)
+                logger.debug('Failed search of join condition, SQL:\n {}'.format(sqlToCursor),
+                             exc_info=True)
 
         autocompleteList = []
         inhibit = False
@@ -262,10 +310,6 @@ class Completion:
         if not autocompleteList:
             return None, False
 
-        # return completions with or without quotes?
-        # determined based on ident after last dot
-        startsWithQuote = _startsWithQuote(prefix.split(".").pop())
-        autocompleteList = [item.format(startsWithQuote) for item in autocompleteList]
         return autocompleteList, inhibit
 
     def _noDotsCompletions(self, prefix, identifiers, joinAlias=None):
