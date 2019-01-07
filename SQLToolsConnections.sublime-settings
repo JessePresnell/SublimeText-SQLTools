@@ -1,16 +1,6 @@
 {
   "connections": {
   /*
-    "Postgres Aula 0":
-    {
-        "type"    : "pgsql",
-        "host"    : "127.0.0.1",
-        "port"    :  5432,
-        "username": "postgres",
-        "password": "admin",
-        "database": "aula0",
-        "encoding": "utf-8"
-    },
     "Generic Template": {      // Connection name, used in menu (Display name)
       "type"     : "pgsql",    // DB type: (mysql, pgsql, oracle, vertica, sqlite, firebird, sqsh)
       "host"     : "HOSTNAME", // DB host to connect to
@@ -95,5 +85,5 @@
     }
   */
   },
-  "default": "Postgres Aula 0"
+  "default": null
 }
