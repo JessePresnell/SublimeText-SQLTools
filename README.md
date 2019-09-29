@@ -39,25 +39,28 @@ SQLTools will save you (for sure) a lot of time and help you to increase your pr
 * Threading support to prevent lockups
 * Query timeout (kill thread if query takes too long)
 
-## Installing
 
-### Using Sublime Package Control
+## Installation
 
-If you are using [Sublime Package Control](https://packagecontrol.io/packages/SQLTools), you can easily install SQLTools via the `Package Control: Install Package` menu item.
+### By Package Control
 
-1. Press <kbd>CTRL+SHIFT+p</kbd>
-2. Type *`Install Package`*
-3. Find *`SQLTools`*
-4. Wait & Done!
+1. Download & Install `Sublime Text 3` (https://www.sublimetext.com/3)
+1. Go to the menu `Tools -> Install Package Control`, then,
+   wait few seconds until the `Package Control` installation finishes
+1. Go to the menu `Preferences -> Package Control`
+1. Type `Package Control Add Channel` on the opened quick panel and press <kbd>Enter</kbd>
+1. Then, input the following address and press <kbd>Enter</kbd>
+   ```
+   https://raw.githubusercontent.com/evandrocoan/StudioChannel/master/channel.json
+   ```
+1. Now, go again to the menu `Preferences -> Package Control`
+1. This time type `Package Control Install Package` on the opened quick panel and press <kbd>Enter</kbd>
+1. Then, search for `SQLTools` and press <kbd>Enter</kbd>
 
-### Download Manually
+See also:
+1. [ITE - Integrated Toolset Environment](https://github.com/evandrocoan/ITE)
+1. [Package control docs](https://packagecontrol.io/docs/usage) for details.
 
-I strongly recommend you to use Package Control. It helps you to keep the package updated with the last version.
-
-1. Download the files zip file [here](http://mtxr.github.io/SQLTools/)
-2. Unzip the files and rename the folder to `SQLTools`
-3. Find your `Packages` directory using the menu item  `Preferences -> Browse Packages...`
-4. Copy the folder into your Sublime Text `Packages` directory
 
 ### Using SQLTools with Mac OS X
 
@@ -91,7 +94,7 @@ Support this project by becoming a sponsor. Your logo will show up here with a l
 <a href="https://opencollective.com/SQLTools/sponsor/8/website" target="_blank"><img src="https://opencollective.com/SQLTools/sponsor/8/avatar.svg"></a>
 <a href="https://opencollective.com/SQLTools/sponsor/9/website" target="_blank"><img src="https://opencollective.com/SQLTools/sponsor/9/avatar.svg"></a>
 
-## Configuration 
+## Configuration
 
 Documentation: [http://mtxr.github.io/SQLTools/](http://mtxr.github.io/SQLTools/)
 
