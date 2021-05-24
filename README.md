@@ -46,25 +46,59 @@ SQLTools will save you (for sure) a lot of time and help you to increase your pr
 * Threading support to prevent lockups
 * Query timeout (kill thread if query takes too long)
 
-## Installing
 
-### Using Sublime Package Control
+## Installation
 
-If you are using [Sublime Package Control](https://packagecontrol.io/packages/SQLTools), you can easily install SQLTools via the `Package Control: Install Package` menu item.
+### By Package Control
 
-1. Press <kbd>CTRL+SHIFT+p</kbd>
-2. Type *`Install Package`*
-3. Find *`SQLTools`*
-4. Wait & Done!
+1. Download & Install **`Sublime Text 3`** (https://www.sublimetext.com/3)
+1. Go to the menu **`Tools -> Install Package Control`**, then,
+    wait few seconds until the installation finishes up
+1. Now,
+    Go to the menu **`Preferences -> Package Control`**
+1. Type **`Add Channel`** on the opened quick panel and press <kbd>Enter</kbd>
+1. Then,
+    input the following address and press <kbd>Enter</kbd>
+    ```
+    https://raw.githubusercontent.com/evandrocoan/StudioChannel/master/channel.json
+    ```
+1. Go to the menu **`Tools -> Command Palette...
+    (Ctrl+Shift+P)`**
+1. Type **`Preferences:
+    Package Control Settings – User`** on the opened quick panel and press <kbd>Enter</kbd>
+1. Then,
+    find the following setting on your **`Package Control.sublime-settings`** file:
+    ```js
+    "channels":
+    [
+        "https://packagecontrol.io/channel_v3.json",
+        "https://raw.githubusercontent.com/evandrocoan/StudioChannel/master/channel.json",
+    ],
+    ```
+1. And,
+    change it to the following, i.e.,
+    put the **`https://raw.githubusercontent...`** line as first:
+    ```js
+    "channels":
+    [
+        "https://raw.githubusercontent.com/evandrocoan/StudioChannel/master/channel.json",
+        "https://packagecontrol.io/channel_v3.json",
+    ],
+    ```
+    * The **`https://raw.githubusercontent...`** line must to be added before the **`https://packagecontrol.io...`** one, otherwise,
+      you will not install this forked version of the package,
+      but the original available on the Package Control default channel **`https://packagecontrol.io...`**
+1. Now,
+    go to the menu **`Preferences -> Package Control`**
+1. Type **`Install Package`** on the opened quick panel and press <kbd>Enter</kbd>
+1. Then,
+    search for **`SQLTools`** and press <kbd>Enter</kbd>
 
-### Download Manually
+See also:
 
-I strongly recommend you to use Package Control. It helps you to keep the package updated with the last version.
+1. [ITE - Integrated Toolset Environment](https://github.com/evandrocoan/ITE)
+1. [Package control docs](https://packagecontrol.io/docs/usage) for details.
 
-1. Download the latest released zip file [here](https://github.com/mtxr/SublimeText-SQLTools/releases/latest)
-2. Unzip the files and rename the folder to `SQLTools`
-3. Find your `Packages` directory using the menu item  `Preferences -> Browse Packages...`
-4. Copy the folder into your Sublime Text `Packages` directory
 
 ### Using SQLTools with Mac OS X
 
@@ -75,7 +109,7 @@ Sublime Text has it's environment variable `PATH` set from launchctl, not by you
 This project exists thanks to all the people who [contribute](https://github.com/mtxr/SublimeText-SQLTools/graphs/contributors).
 
 
-## Configuration 
+## Configuration
 
 Documentation: [https://code.mteixeira.dev/SublimeText-SQLTools/](https://code.mteixeira.dev/SublimeText-SQLTools/)
 

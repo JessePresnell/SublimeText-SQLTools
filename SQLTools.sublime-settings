@@ -83,7 +83,7 @@
         "strip_comments"  : false,
         "indent_tabs"     : false,
         "indent_width"    : 4,
-        "reindent"        : true
+        "reindent"        : false
     },
 
     /**
