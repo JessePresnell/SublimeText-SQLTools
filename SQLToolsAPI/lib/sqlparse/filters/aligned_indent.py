@@ -13,13 +13,14 @@ from sqlparse.utils import offset, indent
 class AlignedIndentFilter(object):
     join_words = (r'((LEFT\s+|RIGHT\s+|FULL\s+)?'
                   r'(INNER\s+|OUTER\s+|STRAIGHT\s+)?|'
+                  r'(SEGMENTED\s)?|'
                   r'(CROSS\s+|NATURAL\s+)?)?JOIN\b')
     split_words = ('FROM',
                    join_words, 'ON',
                    'WHERE', 'AND', 'OR',
                    'GROUP', 'HAVING', 'LIMIT',
                    'ORDER', 'UNION', 'VALUES',
-                   'SET', 'BETWEEN', 'EXCEPT')
+                   'SET', 'BETWEEN', 'EXCEPT', 'SEGMENTED')
 
     def __init__(self, char=' ', n='\n'):
         self.n = n
@@ -99,12 +100,14 @@ class AlignedIndentFilter(object):
     def _split_kwds(self, tlist):
         tidx, token = self._next_token(tlist)
         while token:
+            corrected = (6 - len(token.value))
             # joins are special case. only consider the first word as aligner
             if token.match(T.Keyword, self.join_words, regex=True):
                 token_indent = token.value.split()[0]
+                corrected = 10
             else:
                 token_indent = text_type(token)
-            tlist.insert_before(token, self.nl(token_indent))
+            tlist.insert_before(token, self.nl(corrected))
             tidx += 1
             tidx, token = self._next_token(tlist, tidx)
 

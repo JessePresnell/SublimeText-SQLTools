@@ -51,15 +51,12 @@ class ReindentFilter(object):
     def _next_token(self, tlist, idx=-1):
         split_words = ('FROM', 'STRAIGHT_JOIN$', 'JOIN$', 'AND', 'OR',
                        'GROUP', 'ORDER', 'UNION', 'VALUES',
-                       'SET', 'BETWEEN', 'EXCEPT', 'HAVING', 'LIMIT')
+                       'SET', 'BETWEEN', 'EXCEPT', 'HAVING', 'LIMIT', 'SEGMENTED$')
         m_split = T.Keyword, split_words, True
         tidx, token = tlist.token_next_by(m=m_split, idx=idx)
 
         if token and token.normalized == 'BETWEEN':
             tidx, token = self._next_token(tlist, tidx)
-
-            if token and token.normalized == 'AND':
-                tidx, token = self._next_token(tlist, tidx)
 
         return tidx, token
 
@@ -68,13 +65,16 @@ class ReindentFilter(object):
         while token:
             pidx, prev_ = tlist.token_prev(tidx, skip_ws=False)
             uprev = text_type(prev_)
-
+            if token.value == 'LEFT' or token.value == 'JOIN$' or token.value == 'LEFT JOIN':
+                corrected = 7
+            else:
+                corrected = (6 - len(token.value))
             if prev_ and prev_.is_whitespace:
                 del tlist.tokens[pidx]
                 tidx -= 1
 
             if not (uprev.endswith('\n') or uprev.endswith('\r')):
-                tlist.insert_before(tidx, self.nl())
+                tlist.insert_before(tidx, self.nl(corrected))
                 tidx += 1
 
             tidx, token = self._next_token(tlist, tidx)
@@ -108,11 +108,16 @@ class ReindentFilter(object):
 
     def _process_parenthesis(self, tlist):
         ttypes = T.Keyword.DML, T.Keyword.DDL
+        ttyper = T.Name.Builtin
         _, is_dml_dll = tlist.token_next_by(t=ttypes)
+        _, is_builtin = tlist.token_next_by(t=ttyper)
         fidx, first = tlist.token_next_by(m=sql.Parenthesis.M_OPEN)
 
         with indent(self, 1 if is_dml_dll else 0):
-            tlist.tokens.insert(0, self.nl()) if is_dml_dll else None
+            if is_dml_dll:
+                tlist.tokens.insert(0, self.nl())
+            else:
+                pass
             with offset(self, self._get_offset(first) + 1):
                 self._process_default(tlist, not is_dml_dll)
 
